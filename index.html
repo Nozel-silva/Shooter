@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Shooter Game (Android Controls)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #gameArea {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            border: 2px solid black;
+            background-color: lightblue;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        #character {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: green;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .bubble {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(0, 0, 255, 0.7);
+            border-radius: 50%;
+        }
+
+        .bullet {
+            position: absolute;
+            width: 5px;
+            height: 10px;
+            background-color: red;
+        }
+
+        #score {
+            font-size: 24px;
+            margin: 10px;
+        }
+
+        #startButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .button {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            margin: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .button:active {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bubble Shooter Game</h1>
+    <div id="score">Score: 0</div>
+    <button id="startButton">Start Game</button>
+    <div id="gameArea">
+        <div id="character"></div>
+    </div>
+
+    <!-- Controls for Android (Touch Buttons) -->
+    <div class="controls">
+        <button class="button" id="moveLeft">⬅️ Left</button>
+        <button class="button" id="shoot">🔫 Shoot</button>
+        <button class="button" id="moveRight">➡️ Right</button>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const character = document.getElementById('character');
+        const scoreDisplay = document.getElementById('score');
+        const startButton = document.getElementById('startButton');
+        const moveLeftButton = document.getElementById('moveLeft');
+        const moveRightButton = document.getElementById('moveRight');
+        const shootButton = document.getElementById('shoot');
+
+        let score = 0;
+        let gameInterval;
+        let bubbles = [];
+        let bullets = [];
+        let isGameOver = false;
+
+        // Move character with touch buttons
+        const characterSpeed = 20;
+        moveLeftButton.addEventListener('click', () => {
+            const left = character.offsetLeft;
+            if (left > 0) {
+                character.style.left = `${left - characterSpeed}px`;
+            }
+        });
+
+        moveRightButton.addEventListener('click', () => {
+            const left = character.offsetLeft;
+            if (left < (gameArea.clientWidth - character.clientWidth)) {
+                character.style.left = `${left + characterSpeed}px`;
+            }
+        });
+
+        // Shoot bullet when shoot button is pressed
+        shootButton.addEventListener('click', shootBullet);
+
+        // Function to shoot a bullet
+        function shootBullet() {
+            const bullet = document.createElement('div');
+            bullet.classList.add('bullet');
+            bullet.style.left = `${character.offsetLeft + character.clientWidth / 2 - 2}px`;
+            bullet.style.bottom = `${character.clientHeight}px`;
+            gameArea.appendChild(bullet);
+            bullets.push(bullet);
+        }
+
+        // Function to spawn bubbles
+        function spawnBubble() {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            bubble.style.left = `${Math.random() * (gameArea.clientWidth - 30)}px`;
+            bubble.style.top = `-30px`;  // Start from above the game area
+            gameArea.appendChild(bubble);
+            bubbles.push(bubble);
+        }
+
+        // Function to update bullets and bubbles
+        function updateGame() {
+            // Move bubbles down
+            bubbles.forEach((bubble, index) => {
+                bubble.style.top = `${bubble.offsetTop + 5}px`;
+
+                // Check if bubble hits character (game over)
+                if (bubble.offsetTop + bubble.clientHeight >= character.offsetTop && 
+                    bubble.offsetLeft < character.offsetLeft + character.clientWidth &&
+                    bubble.offsetLeft + bubble.clientWidth > character.offsetLeft) {
+                    gameOver();
+                }
+
+                // Remove bubbles that move out of the game area
+                if (bubble.offsetTop > gameArea.clientHeight) {
+                    gameArea.removeChild(bubble);
+                    bubbles.splice(index, 1);
+                }
+            });
+
+            // Move bullets up
+            bullets.forEach((bullet, index) => {
+                bullet.style.bottom = `${parseInt(bullet.style.bottom) + 10}px`;
+
+                // Remove bullets that move out of the game area
+                if (parseInt(bullet.style.bottom) > gameArea.clientHeight) {
+                    gameArea.removeChild(bullet);
+                    bullets.splice(index, 1);
+                }
+
+                // Check if bullet hits a bubble
+                bubbles.forEach((bubble, bubbleIndex) => {
+                    if (bullet.offsetTop < bubble.offsetTop + bubble.clientHeight &&
+                        bullet.offsetLeft > bubble.offsetLeft &&
+                        bullet.offsetLeft < bubble.offsetLeft + bubble.clientWidth) {
+                        // Remove both bullet and bubble
+                        gameArea.removeChild(bullet);
+                        bullets.splice(index, 1);
+                        gameArea.removeChild(bubble);
+                        bubbles.splice(bubbleIndex, 1);
+                        score++;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                    }
+                });
+            });
+        }
+
+        // Function to start the game
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = `Score: 0`;
+            startButton.disabled = true;
+            isGameOver = false;
+
+            // Spawn bubbles and update game at intervals
+            gameInterval = setInterval(() => {
+                if (!isGameOver) {
+                    spawnBubble();
+                    updateGame();
+                }
+            }, 100);
+        }
+
+        // Function to end the game
+        function gameOver() {
+            clearInterval(gameInterval);
+            isGameOver = true;
+            alert(`Game over! Your score is ${score}`);
+            startButton.disabled = false;
+            bubbles.forEach(bubble => gameArea.removeChild(bubble));
+            bullets.forEach(bullet => gameArea.removeChild(bullet));
+            bubbles = [];
+            bullets = [];
+        }
+
+        startButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
